@@ -1,16 +1,87 @@
-# Apache TomEE JAX-RS Starter Project
+[![Build Status](https://travis-ci.org/cchacin/tomee-jaxrs-starter-project-cucumber.svg)](https://travis-ci.org/cchacin/tomee-jaxrs-starter-project-cucumber)
 
-Know JAX-RS, but haven't yet dug into Apache TomEE?  Way too busy or impatient to read documentation?  This repo is for you.
+# Apache TomEE JAX-RS Starter Project + Cucumber
 
-The only thing better than a Maven archetype is a repo you can fork with everything already setup.  Skip the documentation and just fork-and-code.  This starter project contains:
+## Add the dependencies:
+```xml
+<dependency>
+  <groupId>com.github.cchacin</groupId>
+  <artifactId>cucumber-common-steps</artifactId>
+  <version>0.2.11</version>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>com.github.cukespace</groupId>
+  <artifactId>cukespace-core</artifactId>
+  <version>1.6.0</version>
+  <scope>test</scope>
+</dependency>
+```
 
- - 1 JAX-RS class, 1 JAXB class and 1 JUnit/Arquillian test
- - Maven pom for building a war file
- - Arquillian setup for testing against TomEE JAX-RS Embedded
- - TomEE Maven Plugin for deploying and running our war file
 
-Everything ready-to-run with a simple `maven clean install tomee:run`
+## Run tests with CukeSpace
+```java
+@Glues({RestSteps.class}) // cucumber common steps to test rest endpoints
+@Features({"features/colorservice.feature"}) // feature file(s) to run
+@RunWith(ArquillianCucumber.class) // run with arquillian + cucumber
+public class ColorServiceTest {
 
-Delete the sample code, replace with your own and you're good to go.
+    @Deployment
+    public static WebArchive createDeployment() {
+        return ShrinkWrap
+        .create(WebArchive.class, "test-app.war") // added application path
+        .addClasses(ColorService.class, Color.class);
+    }
+}
+```
 
-Have time for some reading and curious on how everything works?  [Read here](http://www.tomitribe.com/blog/2014/06/apache-tomee-jax-rs-and-arquillian-starter-project/).
+## Set arquillian port to 8080 in ```src/test/resources/arquillian.xml```
+
+```diff
+ <arquillian>
+   <container qualifier="tomee" default="true">
+     <configuration>
+-      <property name="httpPort">-1</property>
++      <property name="httpPort">8080</property>
+       <property name="stopPort">-1</property>
+       <property name="ajpPort">-1</property>
+     </configuration>
+   </container>
+ </arquillian>
+```
+
+## Create the feature file to execute it: ```src/test/resources/features/colorservice.feature```
+```gherkin
+Feature:
+  Scenario: POST and GET
+    When I make a POST call to "test-app/color/green" endpoint with post body:
+    """
+    """
+    Then response status code should be 204
+    And response should be empty
+
+  Scenario: GET
+    When I make a GET call to "test-app/color" endpoint
+    Then response content type should be "application/octet-stream"
+    And response status code should be 200
+    And response should be json:
+    """
+    green
+    """
+
+  Scenario: GET
+    When I make a GET call to "test-app/color/object" endpoint
+    Then response content type should be "application/json"
+    And response status code should be 200
+    And response should be json:
+    """
+    {
+      "color": {
+        "name": "orange",
+        "r": 231,
+        "g": 113,
+        "b": 0
+      }
+    }
+    """
+```
